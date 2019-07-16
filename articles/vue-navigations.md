@@ -56,7 +56,6 @@ install: (Vue, { router, store, moduleName = 'navigation', keyName = 'VNK' } = {
     console.error('vue-navigation need options: router')
     return
   }
-
   // 创建承载容器
   const bus = new Vue()
 
@@ -126,35 +125,58 @@ install: (Vue, { router, store, moduleName = 'navigation', keyName = 'VNK' } = {
 }
 ```
 
-这个文件都是很基本的插件要做的事，接下来看看具体逻辑的实现`navigation.js`，这个里面的代码很简单，只说几个核心的点，其他的仔细看看就能明白。这个文件输出一个函数，函数会返回一个nav对象，对象里有两个函数。核心是`record`这个函数。该方法会根据操作调用不同的函数。\`\``js // toRoute和fromRoute其实就对应vue-router的守卫钩子里面的to, from const record = (toRoute, fromRoute, replaceFlag) => { // 根据路由信息获取key值 const name = getKey(toRoute, keyName);
+这个文件都是很基本的插件要做的事，接下来看看具体逻辑的实现`navigation.js`，这个里面的代码很简单，只说几个核心的点，其他的仔细看看就能明白。这个文件输出一个函数，函数会返回一个nav对象，对象里有两个函数。核心是`record`这个函数。该方法会根据操作调用不同的函数。
 
-// 类型判断 // 如果是替换，直接replace if (replaceFlag) { replace(name, toRoute, fromRoute) } else {
+```js
+ // toRoute和fromRoute其实就对应vue-router的守卫钩子里面的to, from
 
+ const record = (toRoute, fromRoute, replaceFlag) => {
+   // 根据路由信息获取key值
+   const name = getKey(toRoute, keyName);
+   // 类型判断
+   // 如果是替换，直接replace
+   if (replaceFlag) {
+     replace(name, toRoute, fromRoute)
+   }
+   else {
+     // 在栈中从后往前找
+     const toIndex = Routes.lastIndexOf(name)
+     if (toIndex === -1) {
+        // 找不到，相当于进入一个新的页面，前进
+        forward(name, toRoute, fromRoute)
+      } else if (toIndex === Routes.length - 1) {
+        // 要去的路由是栈最后一个，代表刷新
+        refresh(toRoute, fromRoute)
+      } else {
+        // 返回
+        back(Routes.length - 1 - toIndex, toRoute, fromRoute)
+      }
+    }
+  }
 ```
-// 在栈中从后往前找
-const toIndex = Routes.lastIndexOf(name)
 
-if (toIndex === -1) {
-  // 找不到，相当于进入一个新的页面，前进
-  forward(name, toRoute, fromRoute)
-} else if (toIndex === Routes.length - 1) {
-  // 要去的路由是栈最后一个，代表刷新
-  refresh(toRoute, fromRoute)
-} else {
-  // 返回
-  back(Routes.length - 1 - toIndex, toRoute, fromRoute)
-}
+每次的路由的钩子里都会调用该方法，来执行不同的方法记录路由信息。简单的说一个`forward`方法：
+
+```js
+  const forward = (name, toRoute, fromRoute) => {
+    const to = { route: toRoute }
+    const from = { route: fromRoute }
+
+    // 判断store是否存在
+    const routes = store ? store.state[moduleName].routes : Routes
+    // 非空判断
+    from.name = routes[routes.length - 1] || null
+    to.name = name
+
+    // 三目判断，执行store的方法还是还是直接改变routes
+    store ? store.commit('navigation/FORWARD', { to, from, name }) : routes.push(name)
+
+    // 把记录存到sessionStorage里面
+    window.sessionStorage.VUE_NAVIGATION = JSON.stringify(routes)
+    bus.$emit('forward', to, from)
+  }
 ```
 
-\} }`
-每次的路由的钩子里都会调用该方法，来执行不同的方法记录路由信息。简单的说一个`forward`方法
-`js const forward = (name, toRoute, fromRoute) => { const to = { route: toRoute } const from = { route: fromRoute }
-
-// 判断store是否传如 const routes = store ? store.state[moduleName].routes : Routes // 做一个非空判断 from.name = routes[routes.length - 1] || null to.name = name
-
-// 三目判断，执行store的方法还是内存 store ? store.commit('navigation/FORWARD', { to, from, name }) : routes.push(name)
-
-// 把记录存到sessionStorage里面 window.sessionStorage.VUE_NAVIGATION = JSON.stringify(routes) bus.$emit('forward', to, from) }\`\``
 `routes`和`store.state`里面的那个`routes`指向的是同一个地址。每个方法其实都差不多，增删改之类的操作。这些方法的目的只有一个，在内存中维护一个`栈`，用来记录每个路由的历史key。
 
 接下来要说另一个核心的点：缓存页面。使用到了组件的特性，把虚拟的组件实例给缓存了起来，通过key值在路由back的时候再次渲染相应的实例。移步到`components/Navigaton.js`这个文件。
