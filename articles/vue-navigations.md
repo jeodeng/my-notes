@@ -228,3 +228,43 @@ render() {
 ```
 
 如果想要深入了解`render`和`vnode`相关方面的东西，可以看看[这篇文章](http://hcysun.me/vue-design/zh/renderer.html#%E8%B4%A3%E4%BB%BB%E9%87%8D%E5%A4%A7%E7%9A%84%E6%B8%B2%E6%9F%93%E5%99%A8)
+
+顺便研究了一下过渡动画怎么做，其实挺简单的，几句代码就搞定了。
+
+这是使用了vue-navigation的基础上，html部分
+
+```html
+<transition :name="transitionName">
+  <navigation>
+    <router-view/>
+  </navigation>
+</transition>
+```
+
+js部分
+
+```js
+export default {
+  name: 'App',
+  data () {
+    return {
+      transitionName: 'fade',
+    };
+  },
+  created() {
+    // 前进的时候 从左滑入
+    this.$navigation.on('forward', (to, from) => {
+      this.transitionName = 'slide-left';
+    });
+
+    // 后退的时候 从右滑出
+    this.$navigation.on('back', (to, from) => {
+      this.transitionName = 'slide-right';
+    });
+  },
+};
+```
+
+用了navigation的事件触发，slide-right就是vue的动画了。具体例子可以参考[demo](https://github.com/jeodeng/my-navigation-demo)
+
+加上过渡动画每页需要absolute定位，否则过渡的时候两个页面处于文档流，衔接会变得很怪异，但是这导致无法记录滚动位置，当出现这种需求就比较麻烦了。所以就改了下vue-navigation的源码，在缓存实例的时候添加滚动时间 => 记录滚动位置，返回的时候 => 动态修改滚动位置。
