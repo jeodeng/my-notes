@@ -228,6 +228,71 @@ function throttle(fuc, delay = 300) {
   };
 }
 ```
+ 
+### 6. 说说对var, let, const的理解
+
+var可以重复声明，存在声明提升，绑定全局作用域。代码比较直观
+
+```js
+  // 一般来说直接
+  console.log(test);
+  // 是会报错的，因为test没有声明。这大家都理解
+
+  // 那么下面这段代码缺会输出undefined
+  console.log(test);
+  var test = 1;
+
+  // 因为上面这段代码等同于
+  var test;
+  console.log(test);
+  test = 1;
+  // var的变量提升会把声明变量提升到"当前作用域"的顶部
+
+  // 同时var还会绑定全局作用域，直接用代码理解，前提是var在全局作用域中声明使用
+  var test = 'test';
+  console.log(test); // test
+  console.log(window.test); // test
+```
+let和const不存在声明提升，也不会绑定全局作用域；  
+let声明的变量可修改，const不可修改；  
+不过const可以理解为不可修改绑定，可以修改其属性值，看代码
+```js
+  const num = 1;
+  num = 2; // 报错
+
+  const obj = { name: '张三' };
+  obj.name = '李四';
+  obj.sex = '男';
+  console.log(obj); // { name: '李四', sex: '男' };
+```
+而且 let 和 const 还有一个特性，**临时死区(Temporal Dead Zone)**，简写为 **TDZ** （划重点！！！）
+
+之前在了解到let和const不会提升的时候，我就想过一个问题
+```js
+  var name = '张三';
+  function fn() {
+    console.log(name);
+  }
+  fn();
+  // 这里会输出张三，因为js的作用域链，在自己的作用域找不到该变量时会去到上一级作用域找该变量
+
+  // 那么如果是以下情况
+  const name = '张三';
+  function fn() {
+    console.log(name); // 此时fn的作用域未声明name
+    const name = '李四'; // 不会提升变量
+    console.log(name);
+  }
+  fn(); // 调用报错： Cannot access 'name' before initialization
+```
+
+当初我的想法是，第一句 console 未声明 name,那么会去上一级作用域找 name ，输出“张三”。
+第二句 console 因为上一句代码声明了 name，输出李四。
+
+结果以上想法是错的，程序直接报错，就是因为临时死区的存在才会报错。
+在 fn 中只要 const 或者 let 声明了一个变量，虽然不会提升到顶部，但会把变量放在 **DTZ** 中。  
+
+声明之前访问变量会报错，执行过变量声明语句之后才会从 **DTZ** 中移出来，我把这理解为一种另类的提升。
 
 ## Vue系列
 

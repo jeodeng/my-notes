@@ -10,4 +10,4 @@
 
 5. 记录一下帮朋友解决的一个问题。框架vue，一个input输入框，每次输入内容会失去焦点，造成输入一个字符就要点击输入框聚焦。这个问题在本地, mac上都无法重现。我定位问题的思路：环境不同会造成的问题，可能是代码的编译执行，不同环境下会有不同的效果。而且输入框会失去焦点，考虑是否是dom的渲染问题，本地开发时用了webpack-dev-server，并且mac上对比windows可能做了一些优化。验证一下，f12聚焦到input这个dom节点上，开始输入内容。确实，线上环境一旦输入内容，input的dom开始重新渲染，看看代码，这个输入框被一个变量条件v-if判断渲染，查看该变量是否会改变，发现使用了watch, 并且改变变量，可能vue底层发现改变进行了重新渲染，造成页面上input框其实是瞬间消失、出现，失去焦点。把watch给删掉了，bug解决。但我不确定分析的原因是否准确，先打个标记，以后看了vue源码再回头看看该问题是否判断正确。[ ??? ]  
 
-6. 失业了...发现也没累积什么...哎，准备点面试题，不想记在这里，[另开一文](https://github.com/jeodeng/my-notes/blob/master/articles/interview-question.md)   
+6. 失业了...发现也没累积什么...哎，准备点面试题，不想记在这里，[另开一文](https://github.com/jeodeng/my-notes/blob/master/articles/interview-question.md)  
